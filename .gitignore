@@ -55,3 +55,11 @@ out/*
 cli/
 cli/*
 cli/decky
+
+py_modules/*
+!py_modules/server.py
+!py_modules/models.py
+!py_modules/key_emitter.py
+!py_modules/es_de_helper.py
+
+test_script.py

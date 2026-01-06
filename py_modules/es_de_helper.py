@@ -1,3 +1,4 @@
+from logging import Logger
 import os
 import xmltodict
 from models import Paths
@@ -6,37 +7,7 @@ class EsDeHelper:
 
     es_systems: dict = None
 
-    def __init__(self, paths: Paths):
-        self.paths = paths
-
-    def initialize(self):
-        self.load_es_systems()
-        self.write_es_de_event_scripts()
-
-    def load_es_systems(self):
-        es_systems = []
-        es_systems_path = os.path.join(self.paths.pluginFolder, "presets", "retrodeck", "es_systems.xml")
-        with open(es_systems_path, "r") as f: 
-            xml_content = f.read()
-            xml_content = self.preprocess_xml_for_comments(xml_content)
-            es_systems = xmltodict.parse(xml_content)
-
-        custom_es_systems = []
-        custom_es_systems_path = os.path.join(self.paths.esDeConfigFolder, "custom_systems", "es_systems.xml")
-        with open(custom_es_systems_path, "r") as f:
-            xml_content = f.read()
-            xml_content = self.preprocess_xml_for_comments(xml_content)
-            custom_es_systems = xmltodict.parse(xml_content)
-
-        self.es_systems = {}
-        for system in es_systems['systemList']['system']:
-            self.es_systems[system['name']] = system
-
-        # TODO: Fix resolving later
-        #for system in custom_es_systems['systemList']['system']:
-        #   self.es_systems[system['name']] = system
-
-    def preprocess_xml_for_comments(self, xml_content: str) -> str:
+    def _preprocess_xml_for_comments(self, xml_content: str) -> str:
         result = []
         i = 0
         in_comment = False
@@ -60,22 +31,37 @@ class EsDeHelper:
         
         return ''.join(result)
 
-    def resolve_media_path(self, rom_path: str, system_name: str, media_type: str) -> str:
+    def resolve_media_path(self, esMediaBaseUrl: str, rom_path: str, system_name: str, media_type: str) -> str:
         filename = os.path.splitext(os.path.basename(rom_path))[0]
 
         file_ending = ".png"
         if media_type == "manuals":
             file_ending = ".pdf"
-
+    
         image_path = os.path.join(
-            "http://localhost:" + str(8089),
-            "es-de-media",
+            esMediaBaseUrl,
             system_name,
             media_type,
             f"{filename}{file_ending}",
         )
 
         return image_path
+
+    def load_es_systems(self):
+        es_systems = []
+        es_systems_path = os.path.join(self.paths.pluginFolder, "presets", "retrodeck", "es_systems.xml")
+        with open(es_systems_path, "r") as f: 
+            xml_content = f.read()
+            xml_content = self._preprocess_xml_for_comments(xml_content)
+            es_systems = xmltodict.parse(xml_content)
+
+        # TODO: Load custom es systems
+
+        self.es_systems = {}
+        for system in es_systems['systemList']['system']:
+            self.es_systems[system['name']] = system
+
+        self.logger.info(f"Loaded {len(self.es_systems)} es-de systems")
 
     def resolve_emulator_name(self, system_name: str) -> list[str]:
         if system_name not in self.es_systems:
@@ -93,27 +79,31 @@ class EsDeHelper:
 
         return [first_command['@label'].strip()]
 
-    def write_es_de_event_scripts(self):
+    def create_es_de_event_scripts(self, apiBaseUrl: str):
         scripts = [
-            ["game-start", "game_start_decky.sh"],
-            ["game-end", "game_end_decky.sh"],
+            ["game-start", "game_start_decky.sh", "game_start"],
+            ["game-end", "game_end_decky.sh", "game_end"],
         ]
 
-        for script_name, script_file in scripts:
-            source = os.path.join(self.paths.pluginFolder, "scripts", script_name, script_file)
-            with open(source, "r") as f:
-                content = f.read()
+        for script_name, script_file, event_type in scripts:
 
-            os.makedirs(
-                os.path.join(self.paths.esDeConfigFolder, "scripts", script_name), 
-                mode=0o755, 
-                exist_ok=True
-            )
+            api_url = os.path.join(apiBaseUrl, "game-event")
+
+            script_content = f"""
+            curl -X POST -d "{event_type};$1;$2;$3;$4" {api_url}
+            """.strip()
 
             target = os.path.join(self.paths.esDeConfigFolder, "scripts", script_name, script_file)
 
             with open(target, "w") as f:
-                f.write(content)
+                f.write(script_content)
             os.chmod(target, 0o755)
+
+            self.logger.info(f"Created es-de event script: {target}")
+
+    def __init__(self, logger: Logger, paths: Paths):
+        self.logger = logger
+        self.paths = paths
+
 
     

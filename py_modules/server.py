@@ -1,5 +1,7 @@
+from logging import Logger
 import threading
 import os
+import socket
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import unquote
 from models import Paths
@@ -66,7 +68,7 @@ class ServerHandler(SimpleHTTPRequestHandler):
 
 
 class Server:
-    def server_target(self):
+    def _server_target(self):        
         server = HTTPServer(("localhost", self.port), ServerHandler)
 
         server.config = {
@@ -76,11 +78,33 @@ class Server:
 
         server.serve_forever()
 
+    def get_port(self):
+        return self.port
+
+    def get_es_de_media_url(self):
+        return f"http://localhost:{self.port}/es-de-media/"
+
+    def get_api_url(self):
+        return f"http://localhost:{self.port}/api/"
+        
     def start_server(self):
-        server_thread = threading.Thread(target=self.server_target, daemon=True)
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+        
+        self.port = port
+
+        server_thread = threading.Thread(target=self._server_target, daemon=True)
         server_thread.start()
 
-    def __init__(self, port: int, paths: Paths, on_game_event_callback: callable):
-        self.port = port
+        self.logger.info(f"Server started on port {self.port}")
+
+        self.logger.info(f"ES-DE media URL: {self.get_es_de_media_url()}")
+        self.logger.info(f"API URL: {self.get_api_url()}")
+
+    def __init__(self, logger: Logger, paths: Paths, on_game_event_callback: callable):
+        self.logger = logger
         self.paths = paths
         self.on_game_event_callback = on_game_event_callback

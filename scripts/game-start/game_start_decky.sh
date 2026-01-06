@@ -1,1 +1,0 @@
-curl -X POST -d "game_start;${1};${2};${3};${4}" http://localhost:8089/api/game-event

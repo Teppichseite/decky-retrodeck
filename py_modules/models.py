@@ -9,6 +9,7 @@ class GameEvent:
     system_full_name: str
     emulator_name: list[str]
     image_path: str
+    manual_path: str
 
 @dataclass
 class Paths:

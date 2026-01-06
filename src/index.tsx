@@ -1,14 +1,17 @@
 import {
+  Navigation,
+  Router,
   staticClasses
 } from "@decky/ui";
 import {
-  definePlugin
-  // routerHook
+  definePlugin,
+  routerHook,
 } from "@decky/api"
 import { FaGamepad } from "react-icons/fa";
 import { NoGamePage } from "./components/setup";
 import { Game } from "./components/game";
 import { MenuContextProvider, useMenuContext } from "./context";
+import { PdfViewer } from "./components/pdf-viewer";
 
 function Menu() {
 
@@ -29,7 +32,13 @@ function Content() {
 
 
 export default definePlugin(() => {
-  console.log("Template plugin initializing, this is called once on frontend startup");
+  console.log("Template plugin initializing, this is called once on frontend startup1");
+
+  routerHook.addRoute("/retrodeck-menu/pdf-viewer", () => {
+    return <MenuContextProvider>
+      <PdfViewer />
+    </MenuContextProvider>;
+  });
 
   return {
     name: "RetroDeck Menu",
@@ -38,6 +47,7 @@ export default definePlugin(() => {
     icon: <FaGamepad />,
     onDismount() {
       console.log("Unloading");
+      routerHook.removeRoute("/retrodeck-menu/pdf-viewer")
     }
   };
 });

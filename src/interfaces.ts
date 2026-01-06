@@ -5,6 +5,7 @@ export interface GameEvent {
     system_name: string;
     full_system_name: string;
     image_path: string;
+    manual_path: string;
     emulator_name: string[];
 }
 
@@ -22,11 +23,21 @@ export interface Action {
         keys: string[];
     } | {
         type: "builtin";
-        name: "display_manual" | "exit";
+        operation: "view_manual" | "exit";
     } | {
         type: "script";
         path: string;
     };
     systems: "*" | string[];
     emulators: "*" | (string | string[])[] ;
+}
+
+export interface PdfViewState {
+    pageNumber: number;
+    zoom: number;
+    totalPages: number;
+    position: {
+        x: number;
+        y: number;
+    }
 }

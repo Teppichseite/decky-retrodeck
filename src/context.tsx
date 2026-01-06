@@ -1,21 +1,37 @@
-import { createContext, useContext, ReactNode, useEffect } from "react";
-import { Action, GameEvent } from "./interfaces";
+import { createContext, useContext, ReactNode, useEffect, useState } from "react";
+import { Action, GameEvent, PdfViewState } from "./interfaces";
 import {
     addEventListener,
     removeEventListener,
 } from "@decky/api"
 import { adjustCategories, filterActions } from "./utils";
 import { useBackendState } from "./hooks";
-import { getActionsBe, runHotkeyActionBe } from "./backend";
+import { getActionsBe, getGameEventBe } from "./backend";
 import { Router } from "@decky/ui";
+import { SteamClient } from "@decky/ui/dist/globals/steam-client";
+import { FocusChangeEvent } from "@decky/ui/dist/globals/steam-client/system/UI";
+import { holdHotkeys, pressHotkeys, releaseHotkeys } from "./hotkey";
+
+declare var SteamClient: SteamClient;
+
+let lastFocusedChangedEvent: FocusChangeEvent | null = null;
 
 export interface MenuContextValue {
     actions: Action[];
     gameEvent: GameEvent | null;
     displayedActions: Action[];
     heldActions: string[];
+    pdfViewState: PdfViewState;
+    setPdfViewState: (pdfViewState: PdfViewState) => void;
     setGameEvent: (gameEvent: GameEvent | null) => void,
     handleAction: (action: Action) => void,
+}
+
+const defaultPdfViewState: PdfViewState = {
+    pageNumber: 1,
+    zoom: 1.5,
+    totalPages: 1,
+    position: { x: 0, y: 0 }
 }
 
 export const MenuContext = createContext<MenuContextValue>({
@@ -23,6 +39,8 @@ export const MenuContext = createContext<MenuContextValue>({
     gameEvent: null,
     displayedActions: [],
     heldActions: [],
+    pdfViewState: defaultPdfViewState,
+    setPdfViewState: () => { },
     setGameEvent: () => { },
     handleAction: () => { },
 });
@@ -33,33 +51,39 @@ export interface MenuContextProviderProps {
 
 export const MenuContextProvider = (props: MenuContextProviderProps) => {
 
-    const [actions, setActions] = useBackendState<Action[]>("actions", []);
-    const [displayedActions, setDisplayedActions] = useBackendState<Action[]>("displayed_actions", []);
-    const [gameEvent, setGameEvent] = useBackendState<GameEvent | null>("game_event", null);
+    const [actions, setActions] = useState<Action[]>([]);
+    const [displayedActions, setDisplayedActions] = useState<Action[]>([]);
+    const [gameEvent, setGameEvent] = useState<GameEvent | null>(null);
+    
     const [heldActions, setHeldActions] = useBackendState<string[]>("held_actions", []);
+    const [pdfViewState, setPdfViewState] = useBackendState<PdfViewState>("pdf_view_state", defaultPdfViewState);
+
+    const handleGameEvent = (incomingEvent: GameEvent) => {
+        if (incomingEvent.type === 'game_start') {
+            setGameEvent(incomingEvent);
+            return;
+        }
+
+        if (incomingEvent.type === 'game_end') {
+            setGameEvent(null);
+            return;
+        }
+    }
 
     useEffect(() => {
-        getActionsBe().then((actions) => {
+        getActionsBe().then((actions) => { 
             setActions(actions);
         });
-    }, []);
+
+        getGameEventBe().then((gameEvent) => {
+            handleGameEvent(gameEvent);
+        });
+    }, [setActions, setGameEvent]);
 
     useEffect(() => {
         const listener = addEventListener<any>("game_event", (event) => {
-
             const parsedEvent: GameEvent = JSON.parse(event);
-
-            console.log("Template got game_event with:", parsedEvent);
-
-            if (parsedEvent.type === 'game_start') {
-                setGameEvent(parsedEvent);
-                return;
-            }
-
-            if (parsedEvent.type === 'game_end') {
-                setGameEvent(null);
-                return;
-            }
+            handleGameEvent(parsedEvent);
         });
 
         return () => {
@@ -69,6 +93,7 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
 
     useEffect(() => {
         if (!gameEvent) {
+            //setPdfViewState(defaultPdfViewState);
             setDisplayedActions([]);
             return;
         }
@@ -77,8 +102,22 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
         setDisplayedActions(adjustedActions);
     }, [gameEvent]);
 
-    const handleAction = (action: Action) => {
-        if (action.action.type != 'hotkey') {
+    useEffect(() => {
+        if(gameEvent) {
+            const unregisterable = SteamClient.System.UI.RegisterForFocusChangeEvents((event) => {
+                lastFocusedChangedEvent = event;
+            });
+
+            return () => {
+                unregisterable.unregister();
+            };
+        }
+
+        return () => {};
+    }, [gameEvent]);
+
+    const handleHotkeyAction = (action: Action) => {
+        if (action.action.type !== 'hotkey') {
             return;
         }
 
@@ -99,8 +138,58 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
 
         Router.CloseSideMenus();
         setTimeout(() => {
-            runHotkeyActionBe(type, keys);
+            //runHotkeyActionBe(type, keys);
+            if(type === 'hold') {
+                holdHotkeys(keys);
+            } else if(type === 'press') {
+                pressHotkeys(keys);
+            } else if(type === 'release') {
+                releaseHotkeys(keys);
+            }
         }, 200);
+    }
+
+    const handleAction = (action: Action) => {
+        if (action.action.type === 'hotkey') {
+            handleHotkeyAction(action);
+            return;
+        }
+
+        if (action.action.type === 'builtin') {
+
+            if (action.action.operation === 'view_manual') {
+                Router.CloseSideMenus();
+                Router.Navigate("/retrodeck-menu/pdf-viewer");
+                return;
+            }
+
+            if (action.action.operation === 'exit') {
+
+                console.log(lastFocusedChangedEvent);
+
+                if (!lastFocusedChangedEvent) {
+                    return;
+                }
+
+                const esDeApp = lastFocusedChangedEvent.rgFocusable.find((app) => app.strExeName === "es-de");
+                
+                if(!esDeApp) {
+                    return;
+                }
+
+                const emulatorApp = lastFocusedChangedEvent.rgFocusable.find((app) => app.appid === esDeApp.appid);
+
+                if(!emulatorApp) {
+                    return;
+                }
+
+                SteamClient.System.UI.CloseGameWindow(emulatorApp.appid, emulatorApp.windowid);
+
+                Router.CloseSideMenus();
+
+                return;
+            }
+        }
     }
 
     const menuContextValue: MenuContextValue = {
@@ -108,6 +197,8 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
         gameEvent,
         displayedActions,
         heldActions,
+        pdfViewState,
+        setPdfViewState,
         handleAction,
         setGameEvent,
     };

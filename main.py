@@ -15,6 +15,7 @@ import asyncio
 from dataclasses import dataclass, asdict
 import json
 
+
 class Plugin:
     actions: list[dict] = None
 
@@ -25,6 +26,8 @@ class Plugin:
     server: Server = None
 
     es_de_helper: EsDeHelper = None
+
+    game_event: GameEvent = None
 
     states: dict[str, str] = dict()
 
@@ -60,9 +63,13 @@ class Plugin:
     async def _migration(self):
         decky.logger.info("Migrating")
 
+    async def get_game_event(self) -> dict:
+        return asdict(self.game_event)
+
     def on_game_event(self, game_event_raw: str):
         game_event = self.build_game_event(game_event_raw)
         decky.logger.info(f"Game event: {game_event}")
+        self.game_event = game_event
         self.loop.call_soon_threadsafe(
             asyncio.create_task, 
             decky.emit("game_event", json.dumps(asdict(game_event)))
@@ -76,7 +83,8 @@ class Plugin:
 
         rom_path = parts[1]
         system_name = parts[3]
-        image_path = self.es_de_helper.resolve_image_path(rom_path, system_name)
+        image_path = self.es_de_helper.resolve_media_path(rom_path, system_name, "miximages")
+        manual_path = self.es_de_helper.resolve_media_path(rom_path, system_name, "manuals")
 
         decky.logger.info(f"Image path: {image_path}")
 
@@ -92,6 +100,7 @@ class Plugin:
             system_full_name=parts[4],
             emulator_name=emulator_name or parts[4],
             image_path=image_path,
+            manual_path=manual_path,
         )
 
     async def run_hotkey_action(self, type: str, keys: list[str]):

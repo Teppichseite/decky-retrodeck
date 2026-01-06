@@ -60,15 +60,19 @@ class EsDeHelper:
         
         return ''.join(result)
 
-    def resolve_image_path(self, rom_path: str, system_name: str) -> str:
+    def resolve_media_path(self, rom_path: str, system_name: str, media_type: str) -> str:
         filename = os.path.splitext(os.path.basename(rom_path))[0]
+
+        file_ending = ".png"
+        if media_type == "manuals":
+            file_ending = ".pdf"
 
         image_path = os.path.join(
             "http://localhost:" + str(8089),
             "es-de-media",
             system_name,
-            "marquees",
-            f"{filename}.png",
+            media_type,
+            f"{filename}{file_ending}",
         )
 
         return image_path

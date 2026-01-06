@@ -1,5 +1,20 @@
 [
     {
+      "id": "display-view-pdf",
+      "name": "View Manual",
+      "category": "Quick Menu",
+      "icon": {
+        "type": "path",
+        "value": "https://retrodeck.readthedocs.io/en/latest/wiki_icons/binding_icons/RD-preferences-desktop-display.png"
+      },
+      "action": {
+        "type": "builtin",
+        "operation": "view_manual"
+      },
+      "systems": "*",
+      "emulators": "*"
+    },
+    {
       "id": "display-change-dual-screens-layout",
       "name": "Change Dual Screens Layout",
       "category": "Display / Graphics",
@@ -562,24 +577,11 @@
         "value": "https://retrodeck.readthedocs.io/en/latest/wiki_icons/binding_icons/RD-process-stop.png"
       },
       "action": {
-        "type": "hotkey",
-        "operation": "press",
-        "keys": [
-          "KEY_LEFTCTRL",
-          "KEY_Q"
-        ]
+        "type": "builtin",
+        "operation": "exit"
       },
       "systems": "*",
-      "emulators": [
-        "Azahar",
-        "Duckstation (Legacy)",
-        "Dolphin (Standalone)",
-        "PrimeHack (Standalone)",
-        "PCSX2 (Standalone)",
-        "PPSSPP (Standalone)",
-        "RetroArch",
-        "Ruffle"
-      ]
+      "emulators": "*"
     },
     {
       "id": "state-load-state",

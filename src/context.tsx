@@ -58,7 +58,12 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
     const [heldActions, setHeldActions] = useBackendState<string[]>("held_actions", []);
     const [pdfViewState, setPdfViewState] = useBackendState<PdfViewState>("pdf_view_state", defaultPdfViewState);
 
-    const handleGameEvent = (incomingEvent: GameEvent) => {
+    const handleGameEvent = (incomingEvent: GameEvent | null) => {
+        if (!incomingEvent) {
+            setGameEvent(null);
+            return;
+        }
+
         if (incomingEvent.type === 'game_start') {
             setGameEvent(incomingEvent);
             return;

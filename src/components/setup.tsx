@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ButtonItemIconContent } from "./shared";
 import { PanelSection, ButtonItem } from "@decky/ui";
-import { FaCaretDown, FaCaretRight, FaGamepad } from "react-icons/fa";
+import { FaCaretDown, FaCaretRight } from "react-icons/fa";
+import retrodeckLogo from "../../assets/retrodeck-logo.png";
 
 export const NoGamePage = () => {
     const [showSettings, setShowSettings] = useState(false);
@@ -14,7 +15,7 @@ export const NoGamePage = () => {
                 marginTop: '20px',
                 marginBottom: '20px'
             }}>
-                <FaGamepad size={60}></FaGamepad>
+                <img src={retrodeckLogo} width={80} height={80} />
             </div>
             <div style={{ textAlign: 'center', marginTop: '20px', marginBottom: '20px' }}>
                 <strong>No game is currently running.</strong>

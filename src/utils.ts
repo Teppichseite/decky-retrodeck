@@ -49,3 +49,7 @@ export const adjustCategories = (actions: Action[]): Action[] => {
             return 0;
         });
 }
+
+export const getIconPath = (iconName: string) => {
+    return `http://127.0.0.1:1337/plugins/RetroDeck%20Menu/dist/retrodeck-icons/${iconName}`;
+}

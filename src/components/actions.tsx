@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ButtonItemIconContent } from "./shared";
 import { useMenuContext } from "../context";
 import { Action } from "../interfaces";
+import { getIconPath } from "../utils";
 
 export const ActionsComponent = () => {
     const { displayedActions: actions } = useMenuContext();
@@ -46,7 +47,7 @@ export const ActionsComponent = () => {
                             setOpenedCategory(category);
                         }
                     }}
-                    icon={<img src={`https://retrodeck.readthedocs.io/en/latest/wiki_icons/binding_icons/RD-zoom-${openedCategory === category ? 'out' : 'in'}.png`} width={24} height={24} />}
+                    icon={<img src={getIconPath(`RD-zoom-${openedCategory === category ? 'out' : 'in'}.png`)} width={24} height={24} />}
                 >
                     {category}
                 </ActionButton>
@@ -68,7 +69,7 @@ export const ActionComponent = ({ action }: { action: Action }) => {
     }
 
     const icon = action.icon.type === 'path'
-        ? <img alt={action.name} src={action.icon.value} width={24} height={24} />
+        ? <img alt={action.name} src={getIconPath(action.icon.value)} width={24} height={24} />
         : 'v';
 
     const isHoldAction = action.action.type === 'hotkey' && action.action.operation === 'hold';

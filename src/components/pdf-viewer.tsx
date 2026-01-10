@@ -40,7 +40,10 @@ export const PdfViewer = () => {
     const focusableRef = useRef<HTMLDivElement>(null);
 
     const loadPdfDocument = async () => {
-        if (!canvasRef.current || !gameEvent) return;
+
+        if (!gameEvent?.manual_path) return;
+
+        if (!canvasRef.current) return;
         const pdf = await pdfjsLib
             .getDocument({
                 url: gameEvent.manual_path.replace(/\\/g, ""),

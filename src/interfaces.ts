@@ -4,8 +4,8 @@ export interface GameEvent {
     name: string;
     system_name: string;
     full_system_name: string;
-    image_path: string;
-    manual_path: string;
+    image_path: string | null;
+    manual_path: string | null;
     emulator_name: string[];
 }
 

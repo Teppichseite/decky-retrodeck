@@ -18,11 +18,11 @@ export function Game() {
                 alignItems: "center",
                 width: "100%",
             }}>
-                <img
+                {gameEvent.image_path && <img
                     src={gameEvent.image_path.replace(/\\/g, "")}
                     alt={gameEvent.name}
                     style={{ width: "60%", marginTop: '10px' }}
-                />
+                />}
                 <div className={staticClasses.PanelSectionTitle} style={{ marginTop: '20px' }}>
                     {gameEvent.name} - {gameEvent.system_name.toUpperCase()}
                 </div>

@@ -7,13 +7,14 @@ class GameEvent:
     name: str
     system_name: str
     system_full_name: str
-    emulator_name: list[str]
-    image_path: str
-    manual_path: str
+    emulator_name: list[str] | None
+    image_path: str | None
+    manual_path: str | None
 
 @dataclass
 class Paths:
     esDeConfigFolder: str
     esDeDownloadedMediaFolder: str
     esDeDefaultEsSystemsFile: str
-    pluginFolder: str
+    romsFolder: str
+    actionsFile: str

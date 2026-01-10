@@ -23,6 +23,12 @@ class Plugin:
 
     states: dict[str, str] = dict()
 
+    def _resolve_media_path(self, relative_media_path: str | None) -> str | None:
+        if relative_media_path is None:
+            return None
+
+        return os.path.join(self.server.get_es_de_media_url(), relative_media_path)
+
     def _build_game_event(self, raw_data: str) -> GameEvent:
         parts = raw_data.strip().split(";")
         if len(parts) != 5:
@@ -31,8 +37,13 @@ class Plugin:
 
         rom_path = parts[1]
         system_name = parts[3]
-        image_path = self.es_de_helper.resolve_media_path(self.server.get_es_de_media_url(), rom_path, system_name, "miximages")
-        manual_path = self.es_de_helper.resolve_media_path(self.server.get_es_de_media_url(), rom_path, system_name, "manuals")
+
+        miximage_path = self.es_de_helper.resolve_relative_media_path(rom_path, system_name, "miximages")
+        cover_path = self.es_de_helper.resolve_relative_media_path(rom_path, system_name, "covers")
+
+        image_path = miximage_path or cover_path
+
+        manual_path = self.es_de_helper.resolve_relative_media_path(rom_path, system_name, "manuals")
 
         emulator_name = self.es_de_helper.resolve_emulator_name(system_name)
 
@@ -43,26 +54,28 @@ class Plugin:
             system_name=system_name,
             system_full_name=parts[4],
             emulator_name=emulator_name or parts[4],
-            image_path=image_path,
-            manual_path=manual_path,
+            image_path=self._resolve_media_path(image_path),
+            manual_path=self._resolve_media_path(manual_path),
         )
 
     def _on_game_event(self, game_event_raw: str):
 
         decky.logger.info(f"Raw game event received: {game_event_raw}")
-
-        game_event = self._build_game_event(game_event_raw)
-        self.game_event = game_event
-        self.loop.call_soon_threadsafe(
-            asyncio.create_task, 
-            decky.emit("game_event", json.dumps(asdict(game_event)))
-        )
-        decky.logger.info(f"Emitted game event: {game_event}")
+        try:
+            game_event = self._build_game_event(game_event_raw)
+            self.game_event = game_event
+            self.loop.call_soon_threadsafe(
+                asyncio.create_task, 
+                decky.emit("game_event", json.dumps(asdict(game_event)))
+            )
+            decky.logger.info(f"Emitted game event: {game_event}")
+        except Exception as e:
+            decky.logger.error(f"Error emitting game event: {e}")
+            return
 
 
     def _load_actions(self):
-        actions_path = os.path.join(os.path.dirname(__file__), "presets", "retrodeck", "actions.json")
-        with open(actions_path, "r") as f:
+        with open(self.paths.actionsFile, "r") as f:
             self.actions = json.load(f)
 
         decky.logger.info(f"Loaded {len(self.actions)} actions")
@@ -83,12 +96,14 @@ class Plugin:
 
     async def _main(self):
         self.loop = asyncio.get_event_loop()
-        paths_path = os.path.join(os.path.dirname(__file__), "presets", "retrodeck", "paths.json")
-        with open(paths_path, "r") as f:
-            paths_data = json.load(f)
-        
-        paths_data["pluginFolder"] = decky.DECKY_PLUGIN_DIR
-        self.paths = Paths(**paths_data)
+
+        self.paths = Paths(
+            esDeConfigFolder=os.path.join(decky.DECKY_USER_HOME, ".var", "app", "net.retrodeck.retrodeck", "config", "ES-DE"),
+            esDeDownloadedMediaFolder=os.path.join(decky.DECKY_USER_HOME, "retrodeck", "ES-DE", "downloaded_media"),
+            esDeDefaultEsSystemsFile=os.path.join(decky.DECKY_PLUGIN_DIR, "presets", "es_systems.xml"),
+            actionsFile=os.path.join(decky.DECKY_PLUGIN_DIR, "presets", "actions.json"),
+            romsFolder=os.path.join(decky.DECKY_USER_HOME, "retrodeck", "roms")
+        )
 
         decky.logger.info(f"Initialized plugin with paths: {self.paths}")
 

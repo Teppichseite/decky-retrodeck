@@ -61,12 +61,15 @@ export const ActionsComponent = () => {
 }
 
 export const ActionComponent = ({ action }: { action: Action }) => {
-    const { handleAction, heldActions } = useMenuContext();
+    const { handleAction, heldActions, gameEvent } = useMenuContext();
+
+    if(!gameEvent) {
+        return <div/>;
+    }
+
     const icon = action.icon.type === 'path'
         ? <img alt={action.name} src={action.icon.value} width={24} height={24} />
         : 'v';
-
-    console.log("heldActions", heldActions);
 
     const isHoldAction = action.action.type === 'hotkey' && action.action.operation === 'hold';
 
@@ -74,9 +77,12 @@ export const ActionComponent = ({ action }: { action: Action }) => {
 
     const textAddition = `${isHoldAction ? isHeld ? ' - Release' : ' - Hold' : ''}`;
 
+    const isManualViewAction = action.action.type === 'builtin' && action.action.operation === 'view_manual';
+
     return <ActionButton
         onClick={() => handleAction(action)}
         icon={icon}
+        disabled={isManualViewAction && !gameEvent.manual_path}
     >
         {action.name}{textAddition}
     </ActionButton>;
@@ -86,6 +92,7 @@ interface ActionButtonProps {
     onClick: () => void;
     icon: React.ReactNode;
     children: React.ReactNode;
+    disabled?: boolean;
 }
 
 const ActionButton = (props: ActionButtonProps) => {
@@ -93,6 +100,7 @@ const ActionButton = (props: ActionButtonProps) => {
         <ButtonItem
             layout="below"
             onClick={props.onClick}
+            disabled={props.disabled}
         >
             <ButtonItemIconContent icon={props.icon} >
                 {props.children}

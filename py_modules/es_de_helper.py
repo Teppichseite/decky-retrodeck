@@ -31,25 +31,38 @@ class EsDeHelper:
         
         return ''.join(result)
 
-    def resolve_media_path(self, esMediaBaseUrl: str, rom_path: str, system_name: str, media_type: str) -> str:
-        filename = os.path.splitext(os.path.basename(rom_path))[0]
+    def resolve_relative_media_path(self, rom_path: str, system_name: str, media_type: str) -> str:
+        rom_path_no_ext = os.path.splitext(rom_path)[0].replace("\\", "")
 
-        file_ending = ".png"
+        roms_folder_normalized = os.path.normpath(self.paths.romsFolder)
+        rom_path_normalized = os.path.normpath(rom_path_no_ext)
+
+        rom_system_folder = os.path.join(roms_folder_normalized, system_name)
+
+        rom_path_after_system_folder = os.path.relpath(rom_path_normalized, rom_system_folder)
+
+        rel_media_path = os.path.join(system_name, media_type, rom_path_after_system_folder)
+
+        media_path = os.path.join(self.paths.esDeDownloadedMediaFolder, system_name, media_type, rom_path_after_system_folder)
+
+        extensions = [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"]
+
         if media_type == "manuals":
-            file_ending = ".pdf"
+            extensions = [".pdf", ".PDF"]
     
-        image_path = os.path.join(
-            esMediaBaseUrl,
-            system_name,
-            media_type,
-            f"{filename}{file_ending}",
-        )
+        for extension in extensions:
+            resolved_path = f"{media_path}{extension}"
+            if not os.path.exists(resolved_path):
+                continue
+            
 
-        return image_path
+            return f"{rel_media_path}{extension}"
+        
+        return None
 
     def load_es_systems(self):
         es_systems = []
-        es_systems_path = os.path.join(self.paths.pluginFolder, "presets", "retrodeck", "es_systems.xml")
+        es_systems_path = self.paths.esDeDefaultEsSystemsFile
         with open(es_systems_path, "r") as f: 
             xml_content = f.read()
             xml_content = self._preprocess_xml_for_comments(xml_content)

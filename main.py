@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 from es_de_helper import EsDeHelper
 from models import GameEvent, Paths
@@ -22,6 +23,9 @@ class Plugin:
     game_event: GameEvent = None
 
     states: dict[str, str] = dict()
+
+    is_retrodeck_flatpak_installed: bool = False
+    are_es_de_event_scripts_created: bool = False
 
     def _resolve_media_path(self, relative_media_path: str | None) -> str | None:
         if relative_media_path is None:
@@ -94,6 +98,33 @@ class Plugin:
     async def set_state(self, key: str, value: str):
         self.states[key] = value
 
+    def _check_es_de_event_scripts(self) -> bool:
+        try:
+            self.are_es_de_event_scripts_created = self.es_de_helper.create_es_de_event_scripts(self.server.get_api_url())
+        except Exception as e:
+            self.are_es_de_event_scripts_created = False
+            decky.logger.error(f"Error creating es-de event scripts: {e}")
+            return
+
+    def _check_retrodeck_flatpak(self) -> bool:
+        output = subprocess.run(
+            ['flatpak', 'info', 'net.retrodeck.retrodeck'],
+            capture_output=True,
+            env={ "LD_LIBRARY_PATH": "" }
+        )
+
+        if output.returncode != 0:
+            self.is_retrodeck_flatpak_installed = False
+            decky.logger.error(f"Failed to check RetroDeck flatpak installation: {output.stderr.decode()}")
+            return False
+
+        self.is_retrodeck_flatpak_installed = True
+        return True
+
+    async def check_setup_state(self) -> [bool, bool]:
+        return self.is_retrodeck_flatpak_installed, self.are_es_de_event_scripts_created
+        
+
     async def _main(self):
         self.loop = asyncio.get_event_loop()
 
@@ -107,12 +138,18 @@ class Plugin:
 
         decky.logger.info(f"Initialized plugin with paths: {self.paths}")
 
+        self._check_retrodeck_flatpak()
+        if not self.is_retrodeck_flatpak_installed:
+            decky.logger.error("RetroDeck flatpak is not installed")
+            return
+
         self.server = Server(decky.logger, self.paths, self._on_game_event)
         self.server.start_server()
 
         self.es_de_helper = EsDeHelper(decky.logger, self.paths)
         self.es_de_helper.load_es_systems()
-        self.es_de_helper.create_es_de_event_scripts(self.server.get_api_url())
+
+        self._check_es_de_event_scripts()
 
         self._load_actions()
 

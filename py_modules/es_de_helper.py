@@ -103,16 +103,24 @@ class EsDeHelper:
             api_url = os.path.join(apiBaseUrl, "game-event")
 
             script_content = f"""
-            curl -X POST -d "{event_type};$1;$2;$3;$4" {api_url}
+            curl -X POST -d "{event_type};$1;$2;$3;$4 &" {api_url}
             """.strip()
+            
+            target_folder = os.path.join(self.paths.esDeConfigFolder, "scripts", script_name)
+            target = os.path.join(target_folder, script_file)
 
-            target = os.path.join(self.paths.esDeConfigFolder, "scripts", script_name, script_file)
+            os.makedirs(target_folder, exist_ok=True)
 
             with open(target, "w") as f:
                 f.write(script_content)
             os.chmod(target, 0o755)
 
+            if not os.path.exists(target):
+                return False
+
             self.logger.info(f"Created es-de event script: {target}")
+
+        return True
 
     def __init__(self, logger: Logger, paths: Paths):
         self.logger = logger

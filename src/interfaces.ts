@@ -41,3 +41,8 @@ export interface PdfViewState {
         y: number;
     }
 }
+
+export interface SetupState {
+    isRetrodeckFlatpakInstalled: boolean;
+    areEsDeEventScriptsCreated: boolean;
+}

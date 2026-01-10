@@ -1,12 +1,12 @@
 import { createContext, useContext, ReactNode, useEffect, useState } from "react";
-import { Action, GameEvent, PdfViewState } from "./interfaces";
+import { Action, GameEvent, PdfViewState, SetupState } from "./interfaces";
 import {
     addEventListener,
     removeEventListener,
 } from "@decky/api"
 import { adjustCategories, filterActions } from "./utils";
 import { useBackendState } from "./hooks";
-import { getActionsBe, getGameEventBe } from "./backend";
+import { checkSetupStateBe, getActionsBe, getGameEventBe, mapBeSetupStateToSetupState } from "./backend";
 import { Router } from "@decky/ui";
 import { SteamClient } from "@decky/ui/dist/globals/steam-client";
 import { FocusChangeEvent } from "@decky/ui/dist/globals/steam-client/system/UI";
@@ -22,6 +22,7 @@ export interface MenuContextValue {
     displayedActions: Action[];
     heldActions: string[];
     pdfViewState: PdfViewState;
+    setupState: SetupState | null;
     setPdfViewState: (pdfViewState: PdfViewState) => void;
     setGameEvent: (gameEvent: GameEvent | null) => void,
     handleAction: (action: Action) => void,
@@ -40,6 +41,7 @@ export const MenuContext = createContext<MenuContextValue>({
     displayedActions: [],
     heldActions: [],
     pdfViewState: defaultPdfViewState,
+    setupState: null,
     setPdfViewState: () => { },
     setGameEvent: () => { },
     handleAction: () => { },
@@ -57,6 +59,8 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
     
     const [heldActions, setHeldActions] = useBackendState<string[]>("held_actions", []);
     const [pdfViewState, setPdfViewState] = useBackendState<PdfViewState>("pdf_view_state", defaultPdfViewState);
+
+    const [setupState, setSetupState] = useState<SetupState | null>(null);
 
     const handleGameEvent = (incomingEvent: GameEvent | null) => {
         if (!incomingEvent) {
@@ -86,6 +90,11 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
     }, [setActions, setGameEvent]);
 
     useEffect(() => {
+
+        checkSetupStateBe().then((setupState) => {
+            setSetupState(mapBeSetupStateToSetupState(setupState));
+        });
+
         const listener = addEventListener<any>("game_event", (event) => {
             const parsedEvent: GameEvent = JSON.parse(event);
             handleGameEvent(parsedEvent);
@@ -203,6 +212,7 @@ export const MenuContextProvider = (props: MenuContextProviderProps) => {
         displayedActions,
         heldActions,
         pdfViewState,
+        setupState,
         setPdfViewState,
         handleAction,
         setGameEvent,

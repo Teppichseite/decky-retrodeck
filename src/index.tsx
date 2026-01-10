@@ -1,6 +1,4 @@
 import {
-  Navigation,
-  Router,
   staticClasses
 } from "@decky/ui";
 import {
@@ -8,28 +6,15 @@ import {
   routerHook,
 } from "@decky/api"
 import { FaGamepad } from "react-icons/fa";
-import { NoGamePage } from "./components/setup";
-import { Game } from "./components/game";
-import { MenuContextProvider, useMenuContext } from "./context";
+import { MenuContextProvider } from "./context";
 import { PdfViewer } from "./components/pdf-viewer";
-
-function Menu() {
-
-  const { gameEvent } = useMenuContext();
-
-  if (!gameEvent) {
-    return <NoGamePage />;
-  }
-
-  return <Game />;
-};
+import { Menu } from "./components/menu";
 
 function Content() {
   return <MenuContextProvider>
     <Menu />
   </MenuContextProvider>;
 }
-
 
 export default definePlugin(() => {
   console.log("Template plugin initializing, this is called once on frontend startup1");
